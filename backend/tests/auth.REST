@@ -1,0 +1,16 @@
+### Sign up test
+POST http://localhost:8000/api/auth/signup/
+Content-Type: application/json
+
+{
+  "username": "test_user",
+  "password": "Password@1234"
+}
+
+### Login Test
+
+POST http://localhost:8000/api/auth/login/
+Content-Type: application/x-www-form-urlencoded
+
+username = test_user &
+password = Password@1234

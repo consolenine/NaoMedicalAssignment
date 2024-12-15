@@ -1,0 +1,29 @@
+name: nma_app
+services:
+  db:
+    image: postgres:latest
+    container_name: nma_db
+    env_file:
+      - ./.env/.main/.db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../compose/local/backend/Dockerfile
+    container_name: nma_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env/.main/.db
+      - ./.env/.main/.backend
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
