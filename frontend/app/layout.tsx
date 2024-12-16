@@ -5,6 +5,7 @@ import "./globals.css";
 import { Provider } from "@/components/ui/provider";
 import { VStack, Box } from "@chakra-ui/react";
 import { Header } from "@/components";
+import { AuthProvider } from "@/hooks/auth";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -26,12 +27,14 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.className}`}>
         <Provider>
-          <VStack gap={0} h="100vh" w="100vw">
-            <Header w="100%" />
-            <Box as="main" flex={1} w="100%">
-              {children}
-            </Box>
-          </VStack>
+          <AuthProvider>
+            <VStack gap={0} h="100vh" w="100vw">
+              <Header w="100%" />
+              <Box as="main" flex={1} w="100%">
+                {children}
+              </Box>
+            </VStack>
+          </AuthProvider>
         </Provider>
       </body>
     </html>

@@ -32,7 +32,7 @@ class Settings:
 
         if os.getenv("FRONTEND_HOST"):
             self.FRONTEND_HOST = os.getenv("FRONTEND_HOST")
-            self.CORS_ALLOWED_ORIGINS += self.FRONTEND_HOST
+            self.CORS_ALLOWED_ORIGINS.append(self.FRONTEND_HOST)
 
         # Auth
         self.ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 8

@@ -1,4 +1,4 @@
-export const parseJwt = (token: string): Record<string, any> | null => {
+export const parseJwt = (token: string): Record<string, string> | null => {
   try {
     const base64Payload = token.split('.')[1];
     const payload = atob(base64Payload);

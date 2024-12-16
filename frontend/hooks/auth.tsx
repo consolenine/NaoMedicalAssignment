@@ -15,16 +15,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const userData = await getUser();
-        setUser(userData);
-      } catch {
-        setUser(null);
-      }
-    };
-
-    fetchUser();
+    getUser().then((data) => {
+      setUser(data);
+    }).catch(() => {
+      setUser(null);
+    })
   }, []);
 
   return <AuthContext.Provider value={{ user, setUser }}>{children}</AuthContext.Provider>;

@@ -2,10 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { toaster } from "@/components/ui/toaster";
 import socket from '@/lib/socket';
 import { Peer } from "peerjs";
+import { useAuth } from "@/hooks/auth";
 
 const useRoom = () => {
   const [call, setCall] = useState<string>("dormant");
   const [roomID, setRoomID] = useState<string | null>(null);
+  const [peerID, setPeerID] = useState<string | null>(null);
+  const [connectedTo, setConnectedTo] = useState<string | null>(null)
   const [transcript, setTranscript] = useState<string>("");
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -13,9 +16,14 @@ const useRoom = () => {
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const peerConnectionRef = useRef<Peer | null>(null);
 
+  const { user } = useAuth();
+
   interface JoinEventData {
     user: string;
     peer: string;
+  }
+  interface ChatSessionCreatedData {
+    staff_assigned: string;
   }
 
   useEffect(() => {
@@ -64,16 +72,16 @@ const useRoom = () => {
 
     // Set room ID on peer open
     peer.on("open", (id) => {
-      setRoomID(id);
+      setPeerID(id);
     });
 
     // Handle incoming calls
     peer.on("call", (incomingCall) => {
-      console.log("Call answering");
-      setCall("active");
 
       // Ensure local stream is ready before answering
       incomingCall.answer(localStream);
+
+      setCall("connected");
 
       // Handle remote stream
       incomingCall.on("stream", (remoteStream) => {
@@ -87,7 +95,7 @@ const useRoom = () => {
       // Handle call close
       incomingCall.on("close", () => {
         console.log("Call ended");
-        setCall("dormant");
+        setCall("closed");
       });
     });
 
@@ -98,36 +106,46 @@ const useRoom = () => {
         peerConnectionRef.current.destroy();
         peerConnectionRef.current = null;
       }
+      socket.disconnect()
     };
   }, [localStream]);
 
   socket.on("room_joined", (data: JoinEventData) => {
-      console.log("Room joined", data);
-      console.log(localStream);
-      if (peerConnectionRef.current && localStream) {
-        const outgoingCall = peerConnectionRef.current.call(data.peer, localStream);
+    console.log("Room joined", data);
+    console.log(localStream);
+    if (peerConnectionRef.current && localStream) {
+      const outgoingCall = peerConnectionRef.current.call(data.peer, localStream);
 
-        outgoingCall.on("stream", (stream: MediaStream) => {
-          console.log("Outgoing stream", stream);
+      outgoingCall.on("stream", (stream: MediaStream) => {
+        console.log("Outgoing stream", stream);
 
-          // Validate the stream before setting it
-          if (stream instanceof MediaStream) {
-            setRemoteStream(stream);
+        // Validate the stream before setting it
+        if (stream instanceof MediaStream) {
+          setRemoteStream(stream);
 
-            if (remoteVideoRef.current) {
-              remoteVideoRef.current.srcObject = stream;
-            }
-          } else {
-            console.error("Invalid outgoing stream:", stream);
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = stream;
           }
-        });
-      }
-    });
+        } else {
+          console.error("Invalid outgoing stream:", stream);
+        }
+      });
+    }
+  });
+
+
+
+  socket.on("chat_session_created", (data: ChatSessionCreatedData) => {
+    if (data.staff_assigned) {
+      setConnectedTo(data.staff_assigned)
+    }
+  })
 
   const startCall = async () => {
-    if (localStream && roomID) {
-      setCall("ringing");
-      socket.emit("join_room", { peer: roomID });
+    if (localStream && peerID) {
+      setRoomID(peerID);
+      setCall("waiting");
+      socket.emit("create_chat_session", { room: peerID, user: user?.email });
     } else {
       toaster.create({
         title: "Error",
@@ -139,7 +157,7 @@ const useRoom = () => {
   };
 
   const endCall = () => {
-    setCall("dormant");
+    setCall("closed");
     if (peerConnectionRef.current) {
       peerConnectionRef.current.destroy();
     }
@@ -171,8 +189,8 @@ const useRoom = () => {
 
   return {
     call,
+    connectedTo,
     roomID,
-    setRoomID,
     startCall,
     endCall,
     toggleCamera,

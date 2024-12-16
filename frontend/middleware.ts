@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseJwt } from '@/utils/parse_jwt';
+import constants from "@/utils/constants";
 
 export function middleware(req: NextRequest) {
-  const token = req.cookies.get('auth_token');
+  const token = req.cookies.get(constants.AUTH_COOKIE);
 
-  const protectedRoutes = ['/dashboard', '/admin'];
+  const protectedRoutes = ['/room', '/admin'];
   const roleBasedRoutes: Record<string, string> = { '/admin': 'admin' };
 
   // Check for protected routes
-  if (protectedRoutes.includes(req.nextUrl.pathname)) {
+  if (protectedRoutes.some(route => req.nextUrl.pathname.startsWith(route))) {
+    console.log(req.nextUrl.pathname);
     if (!token) {
-      return NextResponse.redirect(new URL('/auth/login', req.url));
+      return NextResponse.redirect(new URL(`/auth/login?redirect=${req.nextUrl.pathname}`, req.url));
     }
 
     // Decode the token to check role
@@ -19,14 +21,13 @@ export function middleware(req: NextRequest) {
       roleBasedRoutes[req.nextUrl.pathname] &&
       payload?.role !== roleBasedRoutes[req.nextUrl.pathname]
     ) {
-      return NextResponse.redirect(new URL('/auth/unauthorized', req.url));
+      return NextResponse.redirect(new URL('/auth/login?redirect=/admin', req.url));
     }
   }
 
   return NextResponse.next();
 }
 
-// Specify which routes to match
 export const config = {
-  matcher: ['/dashboard', '/admin'],
+  matcher: ['/room/:path*', '/admin/:path*'],
 };

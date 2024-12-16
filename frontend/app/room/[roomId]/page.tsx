@@ -1,26 +1,48 @@
 "use client";
+import { useEffect } from "react";
 import {
   HStack, IconButton, Text, VStack,
-  Flex, Box, Span,
+  Flex, Box,
 } from "@chakra-ui/react";
 import {
   TbArrowBack, TbCamera, TbPhone, TbMicrophone
 } from "react-icons/tb";
-import {Toaster} from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/toaster";
 import useRoom from "@/hooks/room";
+import { useAuth } from "@/hooks/auth";
+import { useParams, useRouter } from 'next/navigation'
+import socket from "@/lib/socket";
 
 const RoomPage = () => {
 
+  const { user } = useAuth();
+  const params = useParams<{ roomId: string }>();
+  const router = useRouter();
+
+  const roomId = params.roomId;
+
   const {
+    call,
     roomID,
+    connectedTo,
     remoteStream,
     localVideoRef,
     remoteVideoRef,
     transcript,
     startCall,
+    endCall,
     toggleCamera,
     toggleMic
   } = useRoom();
+
+  useEffect(() => {
+    if (roomID && window.location.pathname !== `/room/${roomID}`) {
+      router.push(`/room/${roomID}`)
+    }
+    if (user && roomId !== 'new') {
+      socket.emit("join_room", { roomID: roomId, user: user?.email })
+    }
+  }, [roomID, roomId, user]);
 
   return (
     <>
@@ -36,9 +58,6 @@ const RoomPage = () => {
           >
             <TbArrowBack/>
           </IconButton>
-          <Text fontSize="md" color="gray.300">
-            Your name <Span color="white" fontSize="xl"> { roomID } </Span>
-          </Text>
         </HStack>
         <Flex
           w="100%" justify="center" align="center"
@@ -52,6 +71,9 @@ const RoomPage = () => {
               muted
               style={{width: "100%", height: "100%", borderRadius: "24px"}}
             />
+            <Text fontSize="md" color="white" pos="absolute" top="2" left="2">
+              { user?.name }
+            </Text>
             <HStack gap={2} pos="absolute" bottom="2" left="50%" transform="translateX(-50%)">
               <IconButton
                 aria-label="Toggle Video"
@@ -79,33 +101,47 @@ const RoomPage = () => {
           </Box>
           <Box h="md" rounded="3xl">
             {
-              remoteStream ? (
+              remoteStream && (
                 <video
                   ref={remoteVideoRef}
                   autoPlay
                   style={{width: "100%", height: "100%", borderRadius: "24px"}}
                 />
-              ) : (
-                <VStack h="100%" justify="center">
-                  <Text color="gray.200" fontSize="3xl">
-                    Connect with a specialist
-                  </Text>
-                  <IconButton
-                    aria-label="Toggle Camera"
-                    rounded="full"
-                    color="white"
-                    bg="gray.800"
-                    size="2xl"
-                    _hover={{bg: "red.500"}}
-                    onClick={startCall}
-                  >
-                    <TbPhone />
-                  </IconButton>
-                </VStack>
               )
             }
           </Box>
         </Flex>
+        {
+          roomId === 'new' && call === 'dormant' && (
+            <VStack w="100%" justify="center" align="center" mt={4}>
+              <Text fontSize="md" color="gray.300">
+                Click to start
+              </Text>
+              <IconButton
+                aria-label="Call"
+                rounded="full"
+                color="white"
+                bg="gray.800"
+                size="2xl"
+                _hover={{bg: "teal.500"}}
+                onClick={startCall}
+              >
+                <TbPhone/>
+              </IconButton>
+            </VStack>
+          )
+        }
+        {
+          roomId !== 'new' && (call === 'waiting' ? (
+              <VStack w="100%" justify="center" align="center" mt={4}>
+                <Text fontSize="md" color="gray.300">
+                  Waiting for { connectedTo }
+                </Text>
+              </VStack>
+            ) : (
+              <></>
+            ))
+        }
         <Text fontSize="md" color="gray.300">
           { transcript }
         </Text>

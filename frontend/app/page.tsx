@@ -11,7 +11,7 @@ export default function Home() {
         Welcome to Healthcare Connect
       </Text>
       <HStack justify={"center"}>
-        <Link href="/dashboard/room">
+        <Link href="/room/new">
           <Button variant="solid" colorPalette="teal" size="md" p={2} mr={4}>
             Connect with a Doctor
           </Button>

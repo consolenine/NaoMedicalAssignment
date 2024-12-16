@@ -3,22 +3,37 @@
 import React, { useState } from 'react';
 import {
   Box,
-  Button,
   Input,
   Heading,
   VStack,
   Text,
+  Span,
 } from '@chakra-ui/react';
+import Link from 'next/link';
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
+
+import { login } from "@/lib/auth";
+import { useAuth } from "@/hooks/auth";
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { setUser } = useAuth();
+  const router = useRouter();
 
   const handleLogin = () => {
-    // Logic for handling login
-    console.log('Email:', email);
-    console.log('Password:', password);
+    setLoading(true);
+    login(email, password).then((user) => {
+      setUser(user);
+      router.push("/");
+    }).catch((err) => {
+      alert(err.message);
+    }).finally(() => {
+      setLoading(false);
+    })
   };
 
   return (
@@ -58,15 +73,22 @@ const LoginPage: React.FC = () => {
             />
           </Field>
           <Button
-            colorScheme="blue"
+            colorPalette="teal"
             width="full"
             onClick={handleLogin}
+            loading={loading}
+            loadingText="Logging in..."
           >
             Login
           </Button>
         </VStack>
         <Text mt={4} fontSize="sm" color="gray.500" textAlign="center">
-          Don&apos;t have an account? Sign up
+          Don&apos;t have an account? &nbsp;
+          <Link href={"/auth/signup"}>
+            <Span color="teal.500" cursor="pointer">
+              Sign up
+            </Span>
+          </Link>
         </Text>
       </Box>
     </Box>
