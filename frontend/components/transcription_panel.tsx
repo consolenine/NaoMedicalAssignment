@@ -1,30 +1,47 @@
-import React from "react";
-import { Box, Text, Heading } from "@chakra-ui/react";
+"use client";
+import React, { useState, useEffect, useRef } from "react";
+import { Stack, Box, Text } from "@chakra-ui/react"
+import { Transcription } from "@/types/events";
 
 interface TranscriptionPanelProps {
-  transcriptPatient: string;
-  transcriptStaff: string;
+  transcriptions?: Transcription[];
 }
 
-const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({
-  transcriptPatient,
-  transcriptStaff,
-}) => {
+const TranscriptionPanel: React.FC<TranscriptionPanelProps> = ({ transcriptions }) => {
+
+  const [showOriginal, setShowOriginal] = useState(true);
+  const [playAudio, setPlayAudio] = useState(false);
+  const baseRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Automatically scroll to bottom
+    if (baseRef.current) {
+      baseRef.current.scrollTo({ top: baseRef.current.scrollHeight });
+    }
+  }, [transcriptions]);
+
+  if (transcriptions === undefined) {
+    return <></>
+  }
+
   return (
-    <Box border="1px" borderColor="gray.200" p={4} borderRadius="md">
-      <Heading size="md" mb={4}>
-        Live Transcription
-      </Heading>
-      <Box mb={4}>
-        <Heading size="sm">Patient:</Heading>
-        <Text>{transcriptPatient}</Text>
-      </Box>
-      <Box>
-        <Heading size="sm">Healthcare Staff:</Heading>
-        <Text>{transcriptStaff}</Text>
-      </Box>
-    </Box>
-  );
-};
+    <Stack
+      gap="2" pos="absolute"
+      left="-20%" bottom="0" maxH="100px"
+      overflow="auto"
+      ref={baseRef}
+    >
+      {
+        transcriptions.length > 0 && transcriptions.map((transcription, index) => (
+          <Box key={index} bg="white" rounded="xl" p={2} maxW="300px">
+            <Text>
+              {showOriginal ? transcription.original : transcription.translated}
+            </Text>
+          </Box>
+        ))
+      }
+    </Stack>
+  )
+}
 
 export default TranscriptionPanel;

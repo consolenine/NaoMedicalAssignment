@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import Column, String, Integer, ForeignKey, JSON, Enum, DateTime
+from sqlalchemy import Column, String, Integer, ForeignKey, Enum, DateTime, ARRAY
 
 from ..core import Base
 
@@ -21,5 +21,7 @@ class  ChatSession(Base):
     status = Column(Enum(ChatSessionStatus), default=ChatSessionStatus.waiting)
     patient_id = Column(Integer, ForeignKey("users.id"))
     staff_id = Column(Integer, ForeignKey("users.id"))
-    patient_transcript = Column(JSON)
-    staff_transcript = Column(JSON)
+    patient_transcript = Column(ARRAY(String))
+    patient_lang = Column(String)
+    staff_transcript = Column(ARRAY(String))
+    staff_lang = Column(String)

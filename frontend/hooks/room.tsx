@@ -1,20 +1,25 @@
+"use client";
+
 import { useEffect, useRef, useState } from 'react';
 import { toaster } from "@/components/ui/toaster";
 import socket from '@/lib/socket';
 import { Peer } from "peerjs";
 import { useAuth } from "@/hooks/auth";
+import { Transcription } from "@/types/events";
 
 const useRoom = () => {
   const [call, setCall] = useState<string>("dormant");
   const [roomID, setRoomID] = useState<string | null>(null);
   const [peerID, setPeerID] = useState<string | null>(null);
   const [connectedTo, setConnectedTo] = useState<string | null>(null)
-  const [transcript, setTranscript] = useState<string>("");
+  const [language, setLanguage] = useState<string[]>([]);
+  const [transcript, setTranscript] = useState<Transcription[]>([]);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const peerConnectionRef = useRef<Peer | null>(null);
+  const speechRecognitionRef = useRef<SpeechRecognition | null>(null);
 
   const { user } = useAuth();
 
@@ -110,6 +115,69 @@ const useRoom = () => {
     };
   }, [localStream]);
 
+  useEffect(() => {
+    if (!localStream || language.length == 0) return;
+
+    if (!speechRecognitionRef.current) {
+      // ------------- Start Speech Recognition
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = language[0];
+        recognition.continuous = true;
+        recognition.onstart = () => {
+          console.log("Speech recognition started...");
+        };
+
+        recognition.onresult = (event: SpeechRecognitionEvent) => {
+          let chunk = "";
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const result = event.results[i];
+            chunk = result[0].transcript;
+            setTranscript((prevTranscript) => [
+              ...prevTranscript,
+              {
+                original: chunk,
+                translated: chunk.toUpperCase()
+              }
+            ])
+            // Emit chunk via socket
+            socket.emit("room_speech_text", {
+              text: chunk,
+              room: roomID,
+            });
+          }
+        };
+
+        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+          console.log("SpeechRecognition error:", event.error);
+          recognition.onend = () => {
+            console.log("Speech recognition ended. ");
+            recognition.start();
+          };
+        };
+        speechRecognitionRef.current = recognition;
+      }
+    }
+
+    speechRecognitionRef.current?.start();
+
+    return () => {
+      speechRecognitionRef.current?.stop();
+      speechRecognitionRef.current = null;
+    };
+  }, [localStream, language]);
+
+  useEffect(() => {
+    console.log(language, roomID)
+    if (language.length > 0 && roomID) {
+      socket.emit("set_lang_preference", {
+        lang: language[0],
+        room: roomID
+      })
+    }
+  }, [language, roomID])
+
   socket.on("room_joined", (data: JoinEventData) => {
     console.log("Room joined", data);
     console.log(localStream);
@@ -190,7 +258,9 @@ const useRoom = () => {
   return {
     call,
     connectedTo,
+    peerID,
     roomID,
+    setRoomID,
     startCall,
     endCall,
     toggleCamera,
@@ -200,6 +270,8 @@ const useRoom = () => {
     remoteStream,
     localVideoRef,
     remoteVideoRef,
+    language,
+    setLanguage
   };
 };
 

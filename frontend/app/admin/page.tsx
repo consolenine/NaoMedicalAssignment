@@ -32,6 +32,10 @@ const AdminRootPage = () => {
     }
   }, [user])
 
+  socket.on("chat_session_created", (data: ChatSession) => {
+    setChatSessions([...chatSessions, data])
+  })
+
   return (
     <Box w={"100%"} p={4}>
       <HStack wrap={"wrap"}>

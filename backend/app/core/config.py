@@ -38,4 +38,6 @@ class Settings:
         self.ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 8
         self.JWT_ALGORITHM = "HS256"
 
+        self.GOOGLE_CLOUD_KEY = os.getenv("GOOGLE_API_KEY")
+
 settings = Settings()
